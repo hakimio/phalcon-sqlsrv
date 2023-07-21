@@ -3,15 +3,15 @@
 namespace Phalcon\Logger\Adapter;
 
 use Phalcon\Logger\Exception;
+use Phalcon\Logger\Formatter\FormatterInterface;
 use Phalcon\Logger\Formatter\Line as LineFormatter;
-use Phalcon\Logger\Adapter as LoggerAdapter;
-use Phalcon\Logger\AdapterInterface;
+use Phalcon\Logger\Item;
 
 /**
  * Phalcon\Logger\Adapter\Database
  * Adapter to store logs in a database table.
  */
-class Database extends LoggerAdapter implements AdapterInterface
+class Database extends AbstractAdapter implements AdapterInterface
 {
     /**
      * Username.
@@ -27,13 +27,14 @@ class Database extends LoggerAdapter implements AdapterInterface
      */
     protected $options = [];
 
+    protected ?LineFormatter $_formatter;
+
     /**
      * Class constructor.
      *
-     * @param string $name
-     * @param array  $options
+     * @param array $options
      *
-     * @throws \Phalcon\Logger\Exception
+     * @throws Exception
      */
     public function __construct(array $options = [])
     {
@@ -55,11 +56,11 @@ class Database extends LoggerAdapter implements AdapterInterface
     /**
      * {@inheritdoc}
      *
-     * @return \Phalcon\Logger\FormatterInterface
+     * @return FormatterInterface
      */
-    public function getFormatter()
+    public function getFormatter(): FormatterInterface
     {
-        if (!is_object($this->_formatter)) {
+        if (!isset($this->_formatter)) {
             $this->_formatter = new LineFormatter();
         }
 
@@ -67,36 +68,11 @@ class Database extends LoggerAdapter implements AdapterInterface
     }
 
     /**
-     * Writes the log to the file itself.
-     *
-     * @param string $message
-     * @param int    $type
-     * @param int    $time
-     * @param array  $context
-     */
-    public function logInternal($message, $type, $time, $context)
-    {
-        //        return $this->options['db']->execute(
-//                'INSERT INTO ' . $this->options['table'] . ' (LogType, LogProcess, LogContent, LogUser, LogDate, LogIP, LogBrowser) VALUES (?, ?, ?, ?, ?, ?, ?)', [$type, $context['process'], $message, $this->username, date('Y-m-d H:i:s', $time), $this->getIP(), $this->getBrowser()]
-//        );
-        return $this->options['db']->insertAsDict(
-                $this->options['table'], array(
-                'LogType' => $type,
-                'LogProcess' => $context['process'],
-                'LogContent' => $message,
-                'LogUser' => $this->username,
-                'LogDate' => date('Y-m-d H:i:s', $time),
-                'LogIP' => $this->getIP(),
-                'LogBrowser' => $this->getBrowser(),
-        ));
-    }
-
-    /**
      * Closes the logger.
      *
      * @return bool
      */
-    public function close()
+    public function close(): bool
     {
         return true;
     }
@@ -125,4 +101,22 @@ class Database extends LoggerAdapter implements AdapterInterface
 
         return "{$info['name']} ({$info['version']})";
     }
+
+    public function process(Item $item): void
+    {
+        /* @var \Phalcon\Db\Adapter\Pdo\Sqlsrv $db */
+        $db = $this->options['db'];
+
+        $db->insertAsDict(
+            $this->options['table'], array(
+            'LogType' => $item->getLevelName(),
+            'LogProcess' => $item->getContext()['process'],
+            'LogContent' => $item->getMessage(),
+            'LogUser' => $this->username,
+            'LogDate' => $item->getDateTime()->format('Y-m-d H:i:s'),
+            'LogIP' => $this->getIP(),
+            'LogBrowser' => $this->getBrowser()
+        ));
+    }
+
 }

@@ -3,20 +3,15 @@
 namespace Phalcon\Db\Dialect;
 
 use Phalcon\Db\Column;
+use Phalcon\Db\Dialect;
 use Phalcon\Db\Exception;
 
 /**
  * Phalcon\Db\Dialect\Sqlsrv
  * Generates database specific SQL for the MsSQL RDBMS.
  */
-class Sqlsrv extends \Phalcon\Db\Dialect
+class Sqlsrv extends Dialect
 {
-    /**
-     * Escape Char.
-     *
-     * @var string
-     */
-    protected $_escapeChar = '"';
 
     /**
      * Generates the SQL for LIMIT clause
@@ -97,11 +92,6 @@ class Sqlsrv extends \Phalcon\Db\Dialect
                 if (empty($columnSql)) {
                     $columnSql .= 'INT';
                 }
-
-                //                $columnSql .= '('.$column->getSize().')';
-//                if ($column->isUnsigned()) {
-//                    $columnSql .= ' UNSIGNED';
-//                }
                 break;
 
             case Column::TYPE_DATE:
@@ -122,9 +112,6 @@ class Sqlsrv extends \Phalcon\Db\Dialect
                     $columnSql .= 'DECIMAL';
                 }
                 $columnSql .= '(' . $column->getSize() . ',' . $column->getScale() . ')';
-                //                if ($column->isUnsigned()) {
-//                    $columnSql .= ' UNSIGNED';
-//                }
                 break;
 
             case Column::TYPE_DATETIME:
@@ -164,16 +151,8 @@ class Sqlsrv extends \Phalcon\Db\Dialect
                 }
                 $size = $column->getSize();
                 if ($size) {
-                    //                    $scale = $column->getScale();
-//                    if ($scale) {
-//                        $columnSql .= '('.size.','.scale.')';
-//                    } else {
-                    $columnSql .= '(' . size . ')';
-                    //                    }
+                    $columnSql .= '(' . $size . ')';
                 }
-                //                if ($column->isUnsigned()) {
-//                    $columnSql .= ' UNSIGNED';
-//                }
                 break;
 
             case Column::TYPE_DOUBLE:
@@ -190,9 +169,6 @@ class Sqlsrv extends \Phalcon\Db\Dialect
                         $columnSql .= ')';
                     }
                 }
-                //                if ($column->isUnsigned()) {
-//                    $columnSql .= ' UNSIGNED';
-//                }
                 break;
 
             case Column::TYPE_BIGINTEGER:
@@ -203,9 +179,6 @@ class Sqlsrv extends \Phalcon\Db\Dialect
                 if ($size) {
                     $columnSql .= '(' . $size . ')';
                 }
-                //                if ($column->isUnsigned()) {
-//                    $columnSql .= ' UNSIGNED';
-//                }
                 break;
 
             case Column::TYPE_TINYBLOB:
@@ -234,7 +207,7 @@ class Sqlsrv extends \Phalcon\Db\Dialect
                         foreach ($typeValues as $value) {
                             $valueSql .= '"' . addcslashes($value, '"') . '", ';
                         }
-                        $columnSql .= '(' . substr(valueSql, 0, -2) . ')';
+                        $columnSql .= '(' . substr($valueSql, 0, -2) . ')';
                     } else {
                         $columnSql .= '("' . addcslashes($typeValues, '"') . '")';
                     }
@@ -346,16 +319,7 @@ class Sqlsrv extends \Phalcon\Db\Dialect
      */
     public function addIndex(string $tableName, string $schemaName, \Phalcon\Db\IndexInterface $index): string
     {
-        $indexType = $index->getType();
-        if (!empty($indexType)) {
-            $sql = ' CREATE ' . $indexType . ' INDEX ';
-        } else {
-            $sql = ' CREATE INDEX ';
-        }
-
-        $sql = '[' . $index->getName() . '] ON ' . $this->prepareTable($tableName, $schemaName) . ' (' . $this->getColumnList($index->getColumns()) . ')';
-
-        return $sql;
+        return '[' . $index->getName() . '] ON ' . $this->prepareTable($tableName, $schemaName) . ' (' . $this->getColumnList($index->getColumns()) . ')';
     }
 
     /**
@@ -545,12 +509,12 @@ class Sqlsrv extends \Phalcon\Db\Dialect
 
                 $onDelete = $reference->getOnDelete();
                 if (!empty($onDelete)) {
-                    $referenceSql .= ' ON DELETE ' . onDelete;
+                    $referenceSql .= ' ON DELETE ' . $onDelete;
                 }
 
                 $onUpdate = $reference->getOnUpdate();
                 if (!empty($onUpdate)) {
-                    $referenceSql .= ' ON UPDATE ' . onUpdate;
+                    $referenceSql .= ' ON UPDATE ' . $onUpdate;
                 }
 
                 $createLines[] = $referenceSql;
@@ -569,18 +533,20 @@ class Sqlsrv extends \Phalcon\Db\Dialect
      * Generates SQL to drop a table.
      *
      * @param string $tableName
-     * @param string $schemaName
+     * @param string|null $schemaName
      * @param bool   $ifExists
      *
      * @return string
      */
-    public function dropTable(string $tableName, string $schemaName = null): string
+    public function dropTable(string $tableName, string $schemaName = null, bool $ifExists = true): string
     {
         $table = $this->prepareTable($tableName, $schemaName);
 
-        $sql = 'DROP TABLE IF EXISTS ' . $table;
+        if ($ifExists) {
+            return 'DROP TABLE IF EXISTS ' . $table;
+        }
 
-        return $sql;
+        return 'DROP TABLE ' . $table;
     }
 
     /**
@@ -733,11 +699,7 @@ class Sqlsrv extends \Phalcon\Db\Dialect
      */
     public function describeIndexes(string $table, ?string $schema = null): string
     {
-        $sql = "SELECT * FROM sys.indexes ind INNER JOIN sys.tables t ON ind.object_id = t.object_id WHERE t.name = '{$table}'";
-        if ($schema) {
-        }
-
-        return $sql;
+        return "SELECT * FROM sys.indexes ind INNER JOIN sys.tables t ON ind.object_id = t.object_id WHERE t.name = '{$table}'";
     }
 
     /**

@@ -19,6 +19,7 @@ use Phalcon\Db\Result\PdoSqlsrv as ResultPdo;
  * </code>.
  *
  * @property \Phalcon\Db\Dialect\Sqlsrv $_dialect
+ * @property \Phalcon\Config\Config $config
  */
 class Sqlsrv extends \Phalcon\Db\Adapter\Pdo\AbstractPdo implements \Phalcon\Db\Adapter\AdapterInterface
 {
@@ -46,17 +47,6 @@ class Sqlsrv extends \Phalcon\Db\Adapter\Pdo\AbstractPdo implements \Phalcon\Db\
 
         $dialectClass = $descriptor['dialectClass'];
         $this->descriptor = $descriptor;
-
-
-        /*
-         * Check if the developer has defined custom options or create one from scratch
-         */
-        if (isset($descriptor['options']) === true) {
-            $options = $descriptor['options'];
-            unset($descriptor['options']);
-        } else {
-            $options = array();
-        }
 
         $dsn = "sqlsrv:server=" . $descriptor['host'] . ";database=" . $descriptor['dbname'] . ";";
         $dbusername = $descriptor['username'];
@@ -231,7 +221,6 @@ class Sqlsrv extends \Phalcon\Db\Adapter\Pdo\AbstractPdo implements \Phalcon\Db\
             $definition['precision'] = (int) $field['PRECISION'];
 
             if ($field['SCALE'] || $field['SCALE'] == '0') {
-                //                $definition["scale"] = (int) $field['SCALE'];
                 $definition['size'] = $definition['precision'];
             }
 
@@ -317,13 +306,10 @@ class Sqlsrv extends \Phalcon\Db\Adapter\Pdo\AbstractPdo implements \Phalcon\Db\
             $cursor = \PDO::CURSOR_FWDONLY;
         }
 
-        if (is_array($bindParams)) {
-            $statement = $this->pdo->prepare($sqlStatement, array(\PDO::ATTR_CURSOR => $cursor));
-            if (is_object($statement)) {
-                $statement = $this->executePrepared($statement, $bindParams, $bindTypes);
-            }
+        $statement = $this->pdo->prepare($sqlStatement, array(\PDO::ATTR_CURSOR => $cursor));
+        if (is_array($bindParams) && is_object($statement)) {
+            $statement = $this->executePrepared($statement, $bindParams, $bindTypes);
         } else {
-            $statement = $this->pdo->prepare($sqlStatement, array(\PDO::ATTR_CURSOR => $cursor));
             $statement->execute();
         }
 
@@ -373,14 +359,14 @@ class Sqlsrv extends \Phalcon\Db\Adapter\Pdo\AbstractPdo implements \Phalcon\Db\
             switch (strtolower($dsn['pdoType'])) {
                 case 'freetds':
                 case 'sybase':
-                    $this->pdoType = 'sybase';
+                    $pdoType = 'sybase';
                     break;
                 case 'mssql':
-                    $this->pdoType = 'mssql';
+                    $pdoType = 'mssql';
                     break;
                 case 'dblib':
                 default:
-                    $this->pdoType = 'dblib';
+                    $pdoType = 'dblib';
                     break;
             }
             unset($dsn['pdoType']);
@@ -391,7 +377,6 @@ class Sqlsrv extends \Phalcon\Db\Adapter\Pdo\AbstractPdo implements \Phalcon\Db\
             $dsn[$key] = "$key=$val";
         }
 
-        $dsn = $this->pdoType . ':' . implode(';', $dsn);
-        return $dsn;
+        return $pdoType . ':' . implode('', $dsn);
     }
 }
