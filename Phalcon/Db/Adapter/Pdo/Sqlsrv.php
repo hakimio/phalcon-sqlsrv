@@ -327,56 +327,8 @@ class Sqlsrv extends \Phalcon\Db\Adapter\Pdo\AbstractPdo implements \Phalcon\Db\
         return $statement;
     }
 
-    /**
-     * Creates a PDO DSN for the adapter from $this->config settings.
-     *
-     * @return string
-     */
     protected function getDsnDefaults(): array
     {
-        // baseline of DSN parts
-        $dsn = $this->config;
-
-        // don't pass the username and password in the DSN
-        unset($dsn['username']);
-        unset($dsn['password']);
-        unset($dsn['options']);
-        unset($dsn['persistent']);
-        unset($dsn['driver_options']);
-
-        if (isset($dsn['port'])) {
-            $seperator = ':';
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                $seperator = ',';
-            }
-            $dsn['host'] .= $seperator . $dsn['port'];
-            unset($dsn['port']);
-        }
-
-        // this driver supports multiple DSN prefixes
-        // @see http://www.php.net/manual/en/ref.pdo-dblib.connection.php
-        if (isset($dsn['pdoType'])) {
-            switch (strtolower($dsn['pdoType'])) {
-                case 'freetds':
-                case 'sybase':
-                    $pdoType = 'sybase';
-                    break;
-                case 'mssql':
-                    $pdoType = 'mssql';
-                    break;
-                case 'dblib':
-                default:
-                    $pdoType = 'dblib';
-                    break;
-            }
-            unset($dsn['pdoType']);
-        }
-
-        // use all remaining parts in the DSN
-        foreach ($dsn as $key => $val) {
-            $dsn[$key] = "$key=$val";
-        }
-
-        return $pdoType . ':' . implode('', $dsn);
+        return [];
     }
 }
